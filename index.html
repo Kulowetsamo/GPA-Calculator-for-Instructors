@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <title>GPA Calculator</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .ei-file-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.05);
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .ei-file-btn {
+            background: var(--accent2, #6060c0);
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .ei-textarea {
+            width: 100%;
+            background: #1e1e2a;
+            border: 1px solid #3a3a4e;
+            border-radius: 12px;
+            color: #e0e0e0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            box-sizing: border-box;
+            margin: 8px 0;
+        }
+        .ei-preview {
+            background: #0f0f18;
+            border-radius: 12px;
+            padding: 10px;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .ei-preview-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .ei-preview-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid #2a2a36;
+        }
+        .ei-preview-new { color: #a0e0a0; }
+        .ei-preview-skip { color: #d0a0a0; opacity: 0.7; }
+        .ei-preview-error { color: #f0a0a0; }
+        .ei-preview-summary {
+            margin-top: 10px;
+            padding-top: 6px;
+            font-weight: bold;
+            border-top: 1px solid #3a3a4e;
+        }
+        .ei-action-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            padding: 8px 0;
+            border-top: 1px solid #2a2a36;
+        }
+        .ei-btn {
+            font-size: 11px;
+            background: #1e1e2e;
+            border: 1px solid #5a5a8a;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        body.light .ei-file-label {
+            background: rgba(0,0,0,0.04);
+            border-color: #ccc;
+        }
+        body.light .ei-file-btn {
+            background: #3a4c8a;
+            color: #fff;
+        }
+        body.light .ei-textarea {
+            background: #fff;
+            border-color: #ccc;
+            color: #111;
+        }
+        body.light .ei-preview {
+            background: #f8f8fb;
+            border-color: #ddd;
+            color: #111;
+        }
+        body.light .ei-preview-item {
+            border-color: #e0e0e5;
+        }
+        body.light .ei-preview-new { color: #1d6a2e; }
+        body.light .ei-preview-skip { color: #7a6f50; opacity: 0.85; }
+        body.light .ei-preview-error { color: #a00; }
+        body.light .ei-preview-summary { border-top-color: #ddd; }
+    </style>
+</head>
+<body>
+
+<!-- CALC -->
+<div class="screen active" id="calcScreen">
+    <div class="header">
+        <div class="header-top">
+            <div class="header-profile" id="activeProfileName">No Profile</div>
+            <button style="background:none;border:1px solid #3a1a1a;color:#c06060;border-radius:6px;padding:6px 14px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;" onclick="confirmReset()">Reset</button>
+        </div>
+        <div class="selectors">
+            <select id="deptSel" onchange="onDeptChange()">
+                <option value="CNGB">CNGB</option>
+                <option value="IENG">IENG</option>
+                <option value="FE">FE</option>
+            </select>
+            <select id="yearSel" onchange="onYearChange()">
+                <option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option>
+            </select>
+            <select id="semSel" onchange="switchSemester()">
+                <option>Fall</option><option>Spring</option>
+            </select>
+        </div>
+    </div>
+    <div class="swipe-hint"><span id="swipeDots"></span></div>
+    <div class="scroll-area" id="calcScrollArea">
+        <div class="banners">
+            <div class="banner">
+                <div class="banner-label">Semester GPA</div>
+                <div class="banner-gpa" id="semGpa">—</div>
+                <div class="banner-sub" id="semCredits"></div>
+            </div>
+            <div class="banner cum" id="cumBanner">
+                <div class="banner-label" id="cumLabel">Cumulative</div>
+                <div class="banner-gpa" id="cumGpa">—</div>
+                <div class="banner-sub" id="cumSubs"></div>
+                <div id="honorBadge" style="display:none;" class="honor-badge"></div>
+            </div>
+        </div>
+        <div class="history-wrap" id="historyWrap"></div>
+        <div class="btn-row">
+            <button class="save-btn" onclick="saveSemester()">Save GPA</button>
+        </div>
+        <div class="col-header"><span>Course</span><span>Cr</span><span>Grade</span></div>
+        <div class="course-list" id="courseList"></div>
+    </div>
+</div>
+
+<!-- PROFILES -->
+<div class="screen" id="profileScreen">
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+        <div class="profile-screen">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px;">
+                <span style="font-family:'DM Mono',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);font-weight:500;">GPA CALC</span>
+                <span style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);">CNGB · IENG · FE</span>
+            </div>
+            <div class="active-profile-bar">
+                <div>
+                    <div class="ap-label">Active Profile</div>
+                    <div class="ap-name" id="activeProfileBarName">None</div>
+                </div>
+                <button class="view-transcript-btn" onclick="showScreen('transcript')">📄 View Transcript</button>
+            </div>
+            <button class="new-profile-btn" onclick="openNewProfileModal()">+ New Profile</button>
+            <button class="new-profile-btn" style="background:var(--surface2);color:var(--accent2);border:1px solid var(--accent2);margin-top:10px;" onclick="openBulkCreateModal()">+ Bulk Create</button>
+            <div class="profiles-label">Filter by Department</div>
+            <div class="dept-tabs">
+                <div class="dept-tab active" id="filterTab_ALL" onclick="setProfileFilter('ALL')">All</div>
+                <div class="dept-tab" id="filterTab_CNGB" onclick="setProfileFilter('CNGB')">CNGB</div>
+                <div class="dept-tab" id="filterTab_IENG" onclick="setProfileFilter('IENG')">IENG</div>
+                <div class="dept-tab" id="filterTab_FE" onclick="setProfileFilter('FE')">FE</div>
+            </div>
+            <div class="profiles-label">Saved Profiles</div>
+            <div class="profile-list" id="profileList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TRANSCRIPT -->
+<div class="screen" id="transcriptScreen">
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+        <div class="transcript-wrap" id="transcriptWrap"></div>
+    </div>
+</div>
+
+<!-- NAV -->
+<div class="nav-bar">
+    <button class="nav-btn active" id="navCalc" onclick="showScreen('calc')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Calc
+    </button>
+    <button class="nav-btn" id="navProfiles" onclick="showScreen('profiles')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Profiles
+    </button>
+    <div style="position:absolute;bottom:6px;right:20px;font-family:'DM Mono',monospace;font-size:8px;color:#556644;letter-spacing:0.08em;pointer-events:none;">v1.2.1</div>
+</div>
+
+<!-- BULK CREATE MODAL -->
+<div class="modal-overlay" id="bulkCreateModal">
+  <div class="modal" style="max-width:420px;">
+    <h2>Bulk Create Profiles</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+      Paste one profile name per line. All profiles will be created with the selected department.
+    </p>
+    <textarea id="bulkNamesInput" rows="8" style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:'DM Mono',monospace;font-size:13px;resize:vertical;box-sizing:border-box;" placeholder="Nihad Aliyev&#10;Adam Abdulla"></textarea>
+    <p id="bulkHint" style="font-size:11px;color:var(--muted);margin:6px 0 0;">
+  Format: <strong>Name, StudentID</strong> &nbsp;or&nbsp; <strong>Name[TAB]StudentID</strong><br>
+  One per line. Student ID is optional.
+</p>
+    <div class="modal-dept-row" style="margin:12px 0 0;">
+      <div id="bmdept_CNGB" class="modal-dept-btn active" onclick="selectBulkDept('CNGB')">CNGB</div>
+      <div id="bmdept_IENG" class="modal-dept-btn" onclick="selectBulkDept('IENG')">IENG</div>
+      <div id="bmdept_FE" class="modal-dept-btn" onclick="selectBulkDept('FE')">FE</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="modal-cancel" onclick="closeBulkCreateModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmBulkCreate()">Create All</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="newProfileModal">
+  <div class="modal">
+    <h2>New Profile</h2>
+    <input type="text" id="profileNameInput" placeholder="Profile name" maxlength="50">
+    <input type="text" id="profileStudentIdInput" placeholder="Student ID (optional)" maxlength="20" style="margin-top:8px;">
+    <div class="modal-dept-row">
+      <div id="mdept_CNGB" class="modal-dept-btn active" onclick="(()=>{_modalDept='CNGB';['CNGB','IENG','FE'].forEach(x=>document.getElementById('mdept_'+x).classList.toggle('active',x===_modalDept))})()">CNGB</div>
+      <div id="mdept_IENG" class="modal-dept-btn" onclick="(()=>{_modalDept='IENG';['CNGB','IENG','FE'].forEach(x=>document.getElementById('mdept_'+x).classList.toggle('active',x===_modalDept))})()">IENG</div>
+      <div id="mdept_FE" class="modal-dept-btn" onclick="(()=>{_modalDept='FE';['CNGB','IENG','FE'].forEach(x=>document.getElementById('mdept_'+x).classList.toggle('active',x===_modalDept))})()">FE</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="modal-cancel" onclick="closeNewProfileModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmNewProfile()">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h2>Delete Profile</h2>
+    <p id="deleteModalText">Delete this profile? This cannot be undone.</p>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmDelete()" style="background:#c06060;">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resetModal">
+  <div class="modal">
+    <h2>Reset Semester</h2>
+    <p>Clear all courses and grades for this semester?</p>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="modal-cancel" onclick="closeResetModal()">Cancel</button>
+      <button class="modal-confirm" onclick="doReset()" style="background:#c06060;">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="renameModal">
+  <div class="modal">
+    <h2>Rename Profile</h2>
+    <input type="text" id="renameInput" placeholder="New profile name" maxlength="50">
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="modal-cancel" onclick="closeRenameModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmRename()">Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><div class="toast-inner"><span id="toastMsg" class="toast-msg"></span><button id="toastUndo" class="toast-undo" onclick="undoDelete()">Undo</button></div><div class="toast-progress"><div id="toastBar" class="toast-progress-bar"></div></div></div>
+
+<!-- IMAGE OVERLAY -->
+<div id="imgOverlay" style="display:none;position:fixed;inset:0;background:#000;z-index:500;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;">
+    <div style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,0.85);position:sticky;top:0;z-index:1;">
+        <button onclick="closeImgOverlay()" style="background:none;border:none;color:#f0f0f0;font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;padding:4px 0;">← Back</button>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:#666;letter-spacing:0.1em;">LONG-PRESS → SAVE</span>
+        <div style="display:flex;gap:8px;">
+            <button onclick="shareImage()" style="background:none;border:1px solid #c8f060;color:#c8f060;border-radius:6px;padding:5px 12px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">Share</button>
+            <button onclick="downloadImg()" style="background:none;border:1px solid #c8f060;color:#c8f060;border-radius:6px;padding:5px 12px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">Save</button>
+        </div>
+    </div>
+    <img id="overlayImg" src="" alt="GPA Transcript" style="display:block;width:100%;height:auto;"/>
+</div>
+
+<script src="data.js" defer></script>
+<script src="storage.js" defer></script>
+<script src="calc.js" defer></script>
+<script src="ui.js" defer></script>
+<script src="app.js" defer></script>
+<script src="excelExport.js" defer></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof loadProfiles === 'function') loadProfiles();
+        if (typeof loadCourses === 'function') loadCourses();
+        if (typeof updateCumulative === 'function') updateCumulative();
+    });
+</script>
+</body>
+</html>
