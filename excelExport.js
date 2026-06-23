@@ -1,7 +1,6 @@
 // ── Wide‑format Excel export (course codes only) ────────────
 
 function getCourseCode(fullName) {
-  // Extract code before the '·' (middle dot) if present, otherwise trim
   const idx = fullName.indexOf('·');
   return idx > 0 ? fullName.substring(0, idx).trim() : fullName.trim();
 }
@@ -52,11 +51,13 @@ function exportAllProfilesToWideExcel() {
       const preset = presets[key] || [];
       const elect = electives[key] || [];
       const presetSorted = [...preset].sort((a, b) => b[1] - a[1]);
+      // Presets (credit-bearing only)
       presetSorted.forEach(([name, cr]) => {
         if (cr > 0) codeSet.add(getCourseCode(name));
       });
+      // Electives
       elect.forEach(name => codeSet.add(getCourseCode(name)));
-      // Retakes (stored as full names, extract code)
+      // Retakes
       const baseCount = presetSorted.length + elect.length;
       for (let i = baseCount; i < saved.length; i++) {
         const extra = saved[i];
@@ -104,28 +105,32 @@ function exportAllProfilesToWideExcel() {
       const elect = electives[key] || [];
       const presetSorted = [...preset].sort((a, b) => b[1] - a[1]);
 
-      // Build map: courseCode -> { credits, grade }
+      // Build a map: courseCode -> { credits, grade } from saved entries
       const savedMap = {};
-      // Presets
-      presetSorted.forEach(([fullName, cr]) => {
+
+      // 1. Presets (credit-bearing)
+      presetSorted.forEach(([fullName, cr], idx) => {
         const code = getCourseCode(fullName);
-        const entry = saved[presetSorted.indexOf([fullName, cr])] || { grade: '', credits: 0 };
+        const entry = saved[idx] || { grade: '', credits: cr };
         savedMap[code] = {
-          credits: entry.credits || 0,
+          credits: entry.credits || cr,
           grade: entry.grade || ''
         };
       });
-      // Electives
+
+      // 2. Electives
+      const electStart = presetSorted.length;
       elect.forEach((fullName, j) => {
         const code = getCourseCode(fullName);
-        const idx = presetSorted.length + j;
+        const idx = electStart + j;
         const entry = saved[idx] || { grade: '', credits: 3 };
         savedMap[code] = {
           credits: entry.credits || 3,
           grade: entry.grade || ''
         };
       });
-      // Retakes
+
+      // 3. Retakes (stored after presets+electives)
       const baseCount = presetSorted.length + elect.length;
       for (let i = baseCount; i < saved.length; i++) {
         const extra = saved[i];
@@ -138,7 +143,7 @@ function exportAllProfilesToWideExcel() {
         }
       }
 
-      // Fill course columns (in the order of codes)
+      // Fill course columns in the order of codes
       codes.forEach(code => {
         const info = savedMap[code];
         if (info && info.grade && info.grade !== 'SKIP') {
