@@ -2,11 +2,9 @@
 let _currentScreen='calc';
 
 function showScreen(name,fromPopState){
-  // Close image overlay if open
   const ov=document.getElementById('imgOverlay');
   if(ov) ov.style.display='none';
 
-  // Close any open modals
   ['newProfileModal','deleteModal','resetModal','renameModal'].forEach(id=>{
     document.getElementById(id)?.classList.remove('open');
   });
