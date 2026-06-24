@@ -1,4 +1,4 @@
-// ── Wide‑format Excel export (course codes only) ────────────
+// ── Excel export ────────────
 
 function getCourseCode(fullName) {
   if (!fullName) return '';
@@ -45,7 +45,7 @@ function exportAllProfilesToWideExcel() {
     const includedSemesters = SEM_ORDER.slice(0, maxFilledIdx + 1);
     console.log('Exporting semesters up to:', includedSemesters);
 
-    // Collect all course codes for each included semester (union across profiles)
+    // Collect all course codes for each included semester 
     const semCourses = {};
     includedSemesters.forEach(([year, sem]) => {
       const key = year + '|' + sem;
@@ -204,7 +204,7 @@ function exportAllProfilesToWideExcel() {
   }
 }
 
-// ── Inject the "📊 Excel (Wide)" button ──────────────────────
+// ── Inject the "📊 Excel " button ──────────────────────
 
 function injectWideExcelButton() {
   const existingRow = document.getElementById('gpaEiRow');
@@ -217,7 +217,7 @@ function injectWideExcelButton() {
   const btn = document.createElement('button');
   btn.id = 'gpaWideExcelBtn';
   btn.className = 'gpa-ei-btn';
-  btn.textContent = '📊 Excel (Wide)';
+  btn.textContent = '📊 Excel';
   btn.onclick = exportAllProfilesToWideExcel;
   btn.style.cssText = 'border-color: #2a6a3a; color: #80c080;';
   existingRow.appendChild(btn);
